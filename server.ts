@@ -35,7 +35,11 @@ async function ConvertV4(): Promise<boolean> {
 
         const newDiff = fromV3Lightshow(v3Diff, v3Lightshow);
 
-        Deno.writeTextFile(`converted/${diff.difficulty}${diff.characteristic}.dat`, JSON.stringify(newDiff));
+        if (diff.characteristic === "Standard") {
+            Deno.writeTextFileSync(`converted/${diff.difficulty}.dat`, JSON.stringify(newDiff));
+        } else {
+            Deno.writeTextFileSync(`converted/${diff.characteristic}${diff.difficulty}.dat`, JSON.stringify(newDiff));
+        }
     }
     return true;
 }
@@ -48,7 +52,7 @@ app.get("/", (_req: Request, res: Response) => {
 app.post("/convert", async (req: Request, res: Response) => {
     const data = req.files.fileUploaded.data
     Deno.writeFileSync("map.zip", new Uint8Array(data))
-    
+
     await decompress("map.zip", "map");
 
     const converted = await ConvertV4();
@@ -63,7 +67,7 @@ app.post("/convert", async (req: Request, res: Response) => {
         Deno.mkdirSync("converted");
         Deno.removeSync("map.zip");
         Deno.removeSync("convertedDifficulties.zip");
-    }, 5000)
+    }, 2000)
 });
 
 const port = Deno.env.get("PORT") || 3000
