@@ -66,6 +66,6 @@ app.post("/convert", async (req: Request, res: Response) => {
     }, 5000)
 });
 
-const port = parse(Deno.args[0]);
+const port = Deno.env.get("PORT") || 3000
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
