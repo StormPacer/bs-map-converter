@@ -4,6 +4,7 @@ import * as bsmap from 'https://raw.githubusercontent.com/KivalEvan/BeatSaber-De
 import { compress, decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
 import fromV3Lightshow from "./functions/convertV3.ts";
 import { IndexFilter } from "https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/beatmap/v3/indexFilter.ts";
+import { parse } from "https://deno.land/std@0.217.0/path/parse.ts";
 
 const app = express();
 app.use(fileupload());
@@ -65,4 +66,6 @@ app.post("/convert", async (req: Request, res: Response) => {
     }, 5000)
 });
 
-app.listen(3000, () => console.log("Listening on port 3000"));
+const port = parse(Deno.args[0]);
+
+app.listen(port, () => console.log("Listening on port 3000"));
