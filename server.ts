@@ -57,7 +57,7 @@ app.post("/convert", async (req: Request, res: Response) => {
 
     const converted = await ConvertV4();
 
-    if (!converted) return res.send("failure")
+    if (!converted) return res.send("Failure.\nZip structure incorrect.")
     await compress("converted", "convertedDifficulties")
     res.download("convertedDifficulties.zip");
     setTimeout(() => {
