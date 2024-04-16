@@ -68,4 +68,4 @@ app.post("/convert", async (req: Request, res: Response) => {
 
 const port = parse(Deno.args[0]);
 
-app.listen(port, () => console.log("Listening on port 3000"));
+app.listen(port, () => console.log(`Listening on port ${port}`));
