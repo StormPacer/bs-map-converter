@@ -3,8 +3,6 @@ import fileupload from "npm:express-fileupload@latest";
 import * as bsmap from 'https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/mod.ts';
 import { compress, decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
 import fromV3Lightshow from "./functions/convertV3.ts";
-import { IndexFilter } from "https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/beatmap/v3/indexFilter.ts";
-import { parse } from "https://deno.land/std@0.217.0/path/parse.ts";
 
 const app = express();
 app.use(fileupload());
@@ -41,6 +39,10 @@ async function ConvertV4(): Promise<boolean> {
             Deno.writeTextFileSync(`converted/${diff.characteristic}${diff.difficulty}.dat`, JSON.stringify(newDiff));
         }
     }
+    const convertedInfo = bsmap.convert.toV2Info(info);
+    Deno.writeTextFileSync(`converted/Info.dat`, JSON.stringify(convertedInfo));
+    Deno.writeFileSync(`converted/${info.audio.filename}`, Deno.readFileSync(`map/${info.audio.filename}`));
+    info.coverImageFilename != "" ? Deno.writeFileSync(`converted/${info.coverImageFilename}`, Deno.readFileSync(`map/${info.coverImageFilename}`)) : null;
     return true;
 }
 
@@ -58,15 +60,15 @@ app.post("/convert", async (req: Request, res: Response) => {
     const converted = await ConvertV4();
 
     if (!converted) return res.send("Failure.\nZip structure incorrect.")
-    await compress("converted", "convertedDifficulties")
-    res.download("convertedDifficulties.zip");
+    await compress("converted", "convertedMap")
+    res.download("convertedMap.zip");
     setTimeout(() => {
         Deno.removeSync("map", { recursive: true });
         Deno.mkdirSync("map");
         Deno.removeSync("converted", { recursive: true });
         Deno.mkdirSync("converted");
         Deno.removeSync("map.zip");
-        Deno.removeSync("convertedDifficulties.zip");
+        Deno.removeSync("convertedMap.zip");
     }, 2000)
 });
 
