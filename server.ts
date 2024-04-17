@@ -34,9 +34,9 @@ async function ConvertV4(): Promise<boolean> {
         const newDiff = fromV3Lightshow(v3Diff, v3Lightshow);
 
         if (diff.characteristic === "Standard") {
-            Deno.writeTextFileSync(`converted/${diff.difficulty}.dat`, JSON.stringify(newDiff));
+            Deno.writeTextFileSync(`converted/${diff.difficulty}.beatmap.dat`, JSON.stringify(newDiff));
         } else {
-            Deno.writeTextFileSync(`converted/${diff.characteristic}${diff.difficulty}.dat`, JSON.stringify(newDiff));
+            Deno.writeTextFileSync(`converted/${diff.characteristic}${diff.difficulty}.beatmap.dat`, JSON.stringify(newDiff));
         }
     }
     const convertedInfo = bsmap.convert.toV2Info(info);
