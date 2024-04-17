@@ -4,12 +4,117 @@
 <head>
     <meta charset="UTF-8">
     <title>V4 Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
 </head>
+<style>
+    html {
+        padding: 30vh 0 0;
+    }
+
+    body {
+        max-width: 20em;
+        margin: 0 auto;
+        background-color:lightslategrey;
+    }
+
+    .bubbly-button {
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        display: inline-block;
+        font-size: 1em;
+        padding: 1em 2em;
+        margin-bottom: 60px;
+        width: 320px;
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: #0080ff;
+        color: #fff;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        transition: transform ease-in 0.1s, box-shadow ease-in 0.25s;
+        box-shadow: 0 2px 25px rgba(0, 60, 255, 0.5);
+        margin-top: 20px;
+    }
+
+    .bubbly-button:focus {
+        outline: 0;
+    }
+
+    .bubbly-button:before,
+    .bubbly-button:after {
+        position: absolute;
+        content: '';
+        display: block;
+        width: 140%;
+        height: 100%;
+        left: -20%;
+        z-index: -1000;
+        transition: all ease-in-out 0.5s;
+        background-repeat: no-repeat;
+    }
+
+    .bubbly-button:before {
+        display: none;
+        top: -75%;
+        background-image: radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, transparent 20%, #0080ff 20%, transparent 30%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, transparent 10%, #0080ff 15%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%);
+        background-size: 10% 10%, 20% 20%, 15% 15%, 20% 20%, 18% 18%, 10% 10%, 15% 15%, 10% 10%, 18% 18%;
+    }
+
+    .bubbly-button:after {
+        display: none;
+        bottom: -75%;
+        background-image: radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, transparent 10%, #0080ff 15%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%), radial-gradient(circle, #0080ff 20%, transparent 20%);
+        background-size: 15% 15%, 20% 20%, 18% 18%, 20% 20%, 15% 15%, 10% 10%, 20% 20%;
+    }
+
+    .bubbly-button:active {
+        transform: scale(0.9);
+        background-color: #0013e6;
+        box-shadow: 0 2px 25px rgba(0, 38, 255, 0.2);
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .custom-file-upload {
+        border: 1px solid #ccc;
+        display: inline-block;
+        width: 290px;
+        height: 40px;
+        padding: 6px 12px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 35px;
+        transition: all 1s;
+    }
+
+    .custom-file-upload:hover {
+        transition: all ease-in 0.3s;
+        box-shadow: 0 2px 25px rgba(0, 60, 255, 0.5);
+        background-color: #0080ff;
+        color: #fff;
+    }
+</style>
 
 <body>
     <form method='post' action='https://converter.stormpacer.xyz/convert' enctype="multipart/form-data">
-        <input type='file' name='fileUploaded'>
-        <input type='submit'>
+        <label for="file-upload" class="custom-file-upload"> Upload map
+        </label>
+        <span id="file-selected"></span>
+        <input type='file' name='fileUploaded' class="fileUpload" id="file-upload">
+        <button type='submit' class="bubbly-button" disabled>Convert Map</button>
+    </form>
 </body>
+<script>
+    $('#file-upload').bind('change', () => {
+        $("#file-selected").html("Map Selected")
+        $(".bubbly-button").prop("disabled", false)
+    });
 
+    $(".bubbly-button").click(() => {
+        $("#file-selected").html("Processing request")
+    });
+</script>
 </html>
