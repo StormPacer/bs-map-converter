@@ -3,9 +3,25 @@ import fileupload from "npm:express-fileupload@latest";
 import * as bsmap from 'https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/mod.ts';
 import { compress, decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
 import fromV3Lightshow from "./functions/convertV3.ts";
+import { AudioData } from "https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/beatmap/v4/audioData.ts";
+import { BPMInfo } from "https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/beatmap/v2/bpmInfo.ts";
 
 const app = express();
 app.use(fileupload());
+
+function removeEmpty(o: any) {
+    for (let key in o) {
+        if (!o[key] || typeof o[key] !== "object") {
+            continue;
+        }
+
+        removeEmpty(o[key]);
+        if (Object.keys(o[key]).length === 0) {
+            delete o[key];
+        }
+    }
+    return o;
+}
 
 async function exists(filename: string): Promise<boolean | any> {
     try {
@@ -24,7 +40,25 @@ async function exists(filename: string): Promise<boolean | any> {
 async function ConvertV4(): Promise<boolean> {
     const existFile = await exists("map/Info.dat")
     if (!existFile) return false;
-    const info = await bsmap.load.info(4, { filePath: "map/Info.dat" })
+    const info = await bsmap.load.info(4, { filePath: "map/Info.dat" });
+    let audioData: AudioData;
+    if (info.audio.audioDataFilename) {
+        audioData = bsmap.load.audioDataSync(`map/${info.audio.audioDataFilename}`, 4);
+        const BPMInfo = {
+            _version: "2.0.0",
+            _songSampleCount: audioData.sampleCount,
+            _songFrequency: audioData.frequency,
+            _regions: audioData.bpmData.map(d => {
+                return {
+                    _startSampleIndex: d.startSampleIndex,
+                    _endSampleIndex: d.endSampleIndex,
+                    _startBeat: d.startBeat,
+                    _endBeat: d.endBeat
+                }
+            })
+        }
+        Deno.writeTextFileSync(`converted/BPMInfo.dat`, JSON.stringify(BPMInfo));
+    }
     for (const diff of info.difficulties) {
         const v4Diff = bsmap.load.difficultySync(`map/${diff.filename}`);
         const v4Lightshow = bsmap.load.lightshowSync(`map/${diff.lightshowFilename}`);
@@ -33,10 +67,20 @@ async function ConvertV4(): Promise<boolean> {
 
         const newDiff = fromV3Lightshow(v3Diff, v3Lightshow);
 
+        // @ts-ignore
+        if (audioData) {
+            const bpmEvents = bsmap.load.audioDataSync(`converted/BPMInfo.dat`).getBpmEvents();
+            bpmEvents.forEach(e => {
+                newDiff.addBpmEvents(e);
+            })
+        }
+
+        const copy: any = JSON.parse(JSON.stringify(newDiff))
+
         if (diff.characteristic === "Standard") {
-            Deno.writeTextFileSync(`converted/${diff.difficulty}.beatmap.dat`, JSON.stringify(newDiff));
+            Deno.writeTextFileSync(`converted/${diff.difficulty}.beatmap.dat`, JSON.stringify(removeEmpty(copy)));
         } else {
-            Deno.writeTextFileSync(`converted/${diff.characteristic}${diff.difficulty}.beatmap.dat`, JSON.stringify(newDiff));
+            Deno.writeTextFileSync(`converted/${diff.characteristic}${diff.difficulty}.beatmap.dat`, JSON.stringify(removeEmpty(copy)));
         }
     }
     const convertedInfo = bsmap.convert.toV2Info(info);
