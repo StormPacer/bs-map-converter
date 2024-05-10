@@ -16,7 +16,7 @@ function removeEmpty(o: any) {
         }
 
         removeEmpty(o[key]);
-        if (Object.keys(o[key]).length === 0) {
+        if (Object.keys(o[key]).length === 0 && key !== "rotationEvents" && key !== "waypoints" && key !== "vfxEventBoxGroups" && key !== "_fxEventsCollection" && key !== "basicEventTypesWithKeywords") {
             delete o[key];
         }
     }
@@ -75,7 +75,7 @@ async function ConvertV4(): Promise<boolean> {
             })
         }
 
-        const copy: any = JSON.parse(JSON.stringify(newDiff))
+        const copy: any = JSON.parse(JSON.stringify(newDiff));
 
         if (diff.characteristic === "Standard") {
             Deno.writeTextFileSync(`converted/${diff.difficulty}.beatmap.dat`, JSON.stringify(removeEmpty(copy)));
