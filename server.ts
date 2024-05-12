@@ -4,7 +4,6 @@ import * as bsmap from 'https://raw.githubusercontent.com/KivalEvan/BeatSaber-De
 import { compress, decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
 import fromV3Lightshow from "./functions/convertV3.ts";
 import { AudioData } from "https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/beatmap/v4/audioData.ts";
-import { BPMInfo } from "https://raw.githubusercontent.com/KivalEvan/BeatSaber-Deno/main/beatmap/v2/bpmInfo.ts";
 
 const app = express();
 app.use(fileupload());
@@ -16,7 +15,7 @@ function removeEmpty(o: any) {
         }
 
         removeEmpty(o[key]);
-        if (Object.keys(o[key]).length === 0 && key !== "rotationEvents" && key !== "waypoints" && key !== "vfxEventBoxGroups" && key !== "_fxEventsCollection" && key !== "basicEventTypesWithKeywords") {
+        if (Object.keys(o[key]).length === 0 && key !== "rotationEvents" && key !== "waypoints" && key !== "vfxEventBoxGroups" && key !== "_fxEventsCollection" && key !== "basicEventTypesWithKeywords" && key !== "e") {
             delete o[key];
         }
     }
@@ -56,7 +55,7 @@ async function ConvertV4(): Promise<boolean> {
                     _endBeat: d.endBeat
                 }
             })
-        }
+        };
         Deno.writeTextFileSync(`converted/BPMInfo.dat`, JSON.stringify(BPMInfo));
     }
     for (const diff of info.difficulties) {
