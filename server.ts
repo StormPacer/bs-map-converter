@@ -15,7 +15,7 @@ function removeEmpty(o: any) {
         }
 
         removeEmpty(o[key]);
-        if (Object.keys(o[key]).length === 0 && key !== "rotationEvents" && key !== "waypoints" && key !== "vfxEventBoxGroups" && key !== "_fxEventsCollection" && key !== "basicEventTypesWithKeywords" && key !== "e") {
+        if (Object.keys(o[key]).length === 0 && key === "customData") {
             delete o[key];
         }
     }
