@@ -22,6 +22,12 @@ function removeEmpty(o: any) {
     return o;
 }
 
+function changeInfo(info: bsmap.v4.Info) {
+    info.difficulties.forEach(diff => {
+        diff.colorSchemeId = 0;
+    });
+}
+
 async function exists(filename: string): Promise<boolean | any> {
     try {
         await Deno.stat(filename)
@@ -40,6 +46,7 @@ async function ConvertV4(): Promise<boolean> {
     const existFile = await exists("map/Info.dat")
     if (!existFile) return false;
     const info = await bsmap.load.info(4, { filePath: "map/Info.dat" });
+    changeInfo(info);
     let audioData: AudioData;
     if (info.audio.audioDataFilename) {
         audioData = bsmap.load.audioDataSync(`map/${info.audio.audioDataFilename}`, 4);
