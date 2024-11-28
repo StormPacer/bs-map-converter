@@ -14,7 +14,7 @@
 		"node": "22.x"
 	},
 	"scripts": {
-		"start": "tsc && node server.js"
+		"start": "npm install && tsc && node server.js"
 	},
 	"devDependencies": {
 		"typescript": "^5.7.2"
