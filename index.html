@@ -253,8 +253,8 @@
                 const blob = await response.blob();
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                const filename = response.headers.get("Content-Disposition").split("filename=")[1].split("_")[1];
-                link.download = filename.substring(0, filename.length - 1);
+                const filename = response.headers.get("Content-Disposition").split("filename=")[1];
+                link.download = filename.substring(1, filename.length - 1);
                 link.click();
 
                 uploadStatus.textContent = "Upload successful! Your file is downloading...";
