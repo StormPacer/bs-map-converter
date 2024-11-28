@@ -174,21 +174,24 @@
 
     <div class="credits-popup" id="creditsPopup">
         <div class="credit-item">
-            <img src="https://cdn.discordapp.com/avatars/235716592896311296/78300caece9101f5cfd2405a9903c5e3.webp?size=1024&format=webp" alt="Profile Picture">
+            <img src="https://cdn.discordapp.com/avatars/235716592896311296/78300caece9101f5cfd2405a9903c5e3.webp?size=1024&format=webp"
+                alt="Profile Picture">
             <div>
                 <h3>Kival Evan</h3>
                 <p>Converter creator | HUGE HELP</p>
             </div>
         </div>
         <div class="credit-item">
-            <img src="https://cdn.discordapp.com/avatars/482507481663275009/e3d7e1e346494354d7c74e6341c6b3ab.webp?size=1024&format=webp" alt="Profile Picture">
+            <img src="https://cdn.discordapp.com/avatars/482507481663275009/e3d7e1e346494354d7c74e6341c6b3ab.webp?size=1024&format=webp"
+                alt="Profile Picture">
             <div>
                 <h3>StormPacer</h3>
                 <p>Site developer</p>
             </div>
         </div>
         <div class="credit-item">
-            <img src="https://cdn.discordapp.com/avatars/306228069520375809/3052f98d66ffddc175bd8eaebff6a898.webp?size=1024&format=webp" alt="Profile Picture">
+            <img src="https://cdn.discordapp.com/avatars/306228069520375809/3052f98d66ffddc175bd8eaebff6a898.webp?size=1024&format=webp"
+                alt="Profile Picture">
             <div>
                 <h3>Undeceiver</h3>
                 <p>Rewrite initiator</p>
@@ -227,16 +230,29 @@
             dropZone.classList.remove('dragover');
 
             const files = event.dataTransfer.files;
-            if (files.length === 0 || files[0].type !== "application/zip") {
+            if (files.length === 0) {
+                uploadStatus.textContent = "No file was dropped.";
+                uploadStatus.style.color = 'red';
+                return;
+            }
+
+            const file = files[0];
+            const validZip = file.type === "application/zip" || file.name.endsWith(".zip");
+
+            if (!validZip) {
                 uploadStatus.textContent = "Please drop a valid ZIP file.";
                 uploadStatus.style.color = 'red';
                 return;
             }
 
+            // Continue with ZIP processing...
+            uploadStatus.textContent = "File accepted!";
+            uploadStatus.style.color = 'green';
+
+
             uploadStatus.textContent = "Uploading file...";
             uploadStatus.style.color = 'white';
 
-            const file = files[0];
             const formData = new FormData();
             formData.append("map", file);
 
