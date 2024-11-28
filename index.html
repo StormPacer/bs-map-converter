@@ -202,20 +202,17 @@
         const creditsButton = document.getElementById('creditsButton');
         const creditsPopup = document.getElementById('creditsPopup');
 
-        // Toggle credits popup visibility
         creditsButton.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent the click from propagating to the document
+            event.stopPropagation();
             creditsPopup.classList.toggle('show');
         });
 
-        // Close popup if clicked outside
         document.addEventListener('click', (event) => {
             if (!creditsPopup.contains(event.target) && !creditsButton.contains(event.target)) {
                 creditsPopup.classList.remove('show');
             }
         });
 
-        // File upload and processing logic
         dropZone.addEventListener('dragover', (event) => {
             event.preventDefault();
             dropZone.classList.add('dragover');
@@ -244,7 +241,7 @@
             formData.append("map", file);
 
             try {
-                const response = await fetch("http://localhost:3000/api/upload", {
+                const response = await fetch("https://converter.stormpacer.xyz/api/upload", {
                     method: "POST",
                     body: formData
                 });
