@@ -8,15 +8,14 @@
 		"bsmap": "^2.1.7",
 		"express": "^4.21.1",
 		"form-data": "^4.0.1",
-		"multer": "1.4.5-lts.1"
+		"multer": "1.4.5-lts.1",
+		"typescript": "^5.7.2"
 	},
 	"engines": {
 		"node": "22.x"
 	},
 	"scripts": {
-		"start": "npm install -g npm@latest && npm install && tsc && node server.js"
-	},
-	"devDependencies": {
-		"typescript": "^5.7.2"
+		"heroku": "npm install -g pnpm && pnpm install && tsc && node server.js",
+		"start": "tsc && node server.js"
 	}
 }
