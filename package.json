@@ -1,0 +1,22 @@
+{
+	"dependencies": {
+		"@types/adm-zip": "^0.5.6",
+		"@types/express": "^5.0.0",
+		"@types/multer": "^1.4.12",
+		"adm-zip": "^0.5.16",
+		"axios": "^1.7.8",
+		"bsmap": "^2.1.7",
+		"express": "^4.21.1",
+		"form-data": "^4.0.1",
+		"multer": "1.4.5-lts.1"
+	},
+	"engines": {
+		"node": "22.x"
+	},
+	"scripts": {
+		"start": "tsc && node server.js"
+	},
+	"devDependencies": {
+		"typescript": "^5.7.2"
+	}
+}
