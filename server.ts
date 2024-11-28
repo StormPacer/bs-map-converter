@@ -1,6 +1,6 @@
 import multer from "multer";
 import AdmZip from "adm-zip";
-import express, { json, Request } from "express";
+import express, { Request } from "express";
 import path from "path";
 import { Info, loadInfo, readAudioDataFileSync, saveInfo, readDifficultyFileSync, readLightshowFileSync, writeDifficultyFileSync, writeAudioDataFile } from "bsmap";
 import fs from "fs";
