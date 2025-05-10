@@ -1,9 +1,31 @@
 import multer from "multer";
 import AdmZip from "adm-zip";
-import express, { Request } from "express";
+import express, { Request, Response } from "express";
 import path from "path";
 import { Info, loadInfo, readAudioDataFileSync, saveInfo, readDifficultyFileSync, readLightshowFileSync, writeDifficultyFileSync, writeAudioDataFile } from "bsmap";
 import fs from "fs";
+import { EventEmitter } from "events";
+
+interface ConversionProgress {
+    status: 'pending' | 'extracting' | 'converting' | 'compressing' | 'complete' | 'failed';
+    message: string;
+    progress: number;
+    error?: string;
+    startTime: number;
+    lastUpdated: number;
+}
+
+const progressTracker = new Map<string, ConversionProgress>();
+const progressEvent = new EventEmitter();
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [requestId, progress] of progressTracker) {
+        if (now - progress.lastUpdated > 60 * 1000) {
+            progressTracker.delete(requestId);
+        }
+    }
+}, 60 * 1000);
 
 function removeEmpty(o: any) {
     for (let key in o) {
@@ -45,14 +67,14 @@ function exists(filename: string, returnPath: boolean = false): boolean | any {
 }
 
 
-async function ConvertV4(): Promise<boolean> {
+async function ConvertV4(inputDir: string, outputDir: string): Promise<boolean> {
     try {
-        const infoFile = exists(path.join("map", "Info.dat"));
+        const infoFile = exists(path.join(inputDir, "Info.dat"));
         if (!infoFile) return false;
         const info = loadInfo(infoFile, 4) as Info;
         changeInfo(info);
 
-        const audioFile = exists(path.join("map", info.audio.audioDataFilename), true)
+        const audioFile = exists(path.join(inputDir, info.audio.audioDataFilename), true)
         const audioData = readAudioDataFileSync(audioFile).setFilename(
             'BPMInfo.dat',
         );
@@ -60,12 +82,12 @@ async function ConvertV4(): Promise<boolean> {
 
         const bpmEvents = audioData.getBpmEvents();
 
-        fs.writeFileSync(`converted/BPMInfo.dat`, JSON.stringify(audioData));
+        fs.writeFileSync(`${outputDir}/BPMInfo.dat`, JSON.stringify(audioData));
 
         for (const diff of info.difficulties) {
-            const v4DiffFile = exists(path.join("map", diff.filename), true);
+            const v4DiffFile = exists(path.join(inputDir, diff.filename), true);
             const v4Diff = readDifficultyFileSync(v4DiffFile);
-            const v4LightshowFile = exists(path.join("map", diff.lightshowFilename), true);
+            const v4LightshowFile = exists(path.join(inputDir, diff.lightshowFilename), true);
             const v4Lightshow = readLightshowFileSync(v4LightshowFile);
             v4Diff.lightshow = v4Lightshow.lightshow;
 
@@ -77,30 +99,31 @@ async function ConvertV4(): Promise<boolean> {
             const newDiff = writeDifficultyFileSync(v4Diff, 3);
 
             const copy: any = JSON.parse(JSON.stringify(newDiff));
+            const outputFilename = diff.characteristic === "Standard" ?
+                `${diff.difficulty}.beatmap.dat` :
+                `${diff.characteristic}${diff.difficulty}.beatmap.dat`;
 
-            if (diff.characteristic === "Standard") {
-                fs.writeFileSync(`converted/${diff.difficulty}.beatmap.dat`, JSON.stringify(removeEmpty(copy)));
-            } else {
-                fs.writeFileSync(`converted/${diff.characteristic}${diff.difficulty}.beatmap.dat`, JSON.stringify(removeEmpty(copy)));
-            }
+            fs.writeFileSync(`${outputDir}/${outputFilename}`, JSON.stringify(removeEmpty(copy)));
         }
 
         const convertedInfo = saveInfo(info, 2);
         const infoCopy = JSON.parse(JSON.stringify(convertedInfo));
-        fs.writeFileSync(`converted/Info.dat`, JSON.stringify(infoCopy));
-        fs.writeFileSync(`converted/${info.audio.filename}`, fs.readFileSync(`map/${info.audio.filename}`));
-        info.coverImageFilename != "" ? fs.writeFileSync(`converted/${info.coverImageFilename}`, fs.readFileSync(`map/${info.coverImageFilename}`)) : null;
+        fs.writeFileSync(`${outputDir}/Info.dat`, JSON.stringify(infoCopy));
+        fs.writeFileSync(`${outputDir}/${info.audio.filename}`, fs.readFileSync(`${inputDir}/${info.audio.filename}`));
+
+        if (info.coverImageFilename) {
+            fs.writeFileSync(`${outputDir}/${info.coverImageFilename}`,
+                fs.readFileSync(`${inputDir}/${info.coverImageFilename}`));
+        }
+
         return true;
     } catch (e) {
-        console.log(e)
+        console.error("Conversion error:", e);
         return false;
     }
 }
 
 const storage = multer.diskStorage({
-    destination: (req, res, cb) => {
-        cb(null, "./processed/");
-    },
     filename: (req, file, cb) => {
         cb(null, file.originalname);
     }
@@ -132,52 +155,178 @@ app.get("/", (req, res) => {
 })
 
 // @ts-ignore
-app.post("/api/upload", uploadMiddleware, async (req: TypedRequest, res) => {
+app.post("/api/upload", uploadMiddleware, async (req: TypedRequest, res: Response) => {
     const mapZip = req.files?.map ? (req.files?.map as Express.Multer.File[])[0] : undefined
 
     if (!mapZip) {
         return res.status(400).send("No map provided.");
     }
 
-    fs.mkdirSync(path.join(__dirname, "map"), { recursive: true });
-    fs.mkdirSync(path.join(__dirname, "converted"), { recursive: true });
+    const requestId = Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+    const mapDir = path.join(__dirname, `map-${requestId}`);
+    const convertedDir = path.join(__dirname, `converted-${requestId}`);
 
-    const convertedName = mapZip.filename.split(".")[0]
+    progressTracker.set(requestId, {
+        status: 'pending',
+        message: 'Starting conversion process',
+        progress: 0,
+        startTime: Date.now(),
+        lastUpdated: Date.now()
+    });
 
-    const zipPath = path.join(mapZip.destination, mapZip.filename);
+    try {
+        fs.mkdirSync(mapDir, { recursive: true });
+        fs.mkdirSync(convertedDir, { recursive: true });
 
-    const zip = new AdmZip(zipPath);
-    zip.extractAllTo(path.join(__dirname, "map"));
+        progressTracker.set(requestId, {
+            status: 'extracting',
+            message: 'Extracting map files',
+            progress: 20,
+            startTime: progressTracker.get(requestId)!.startTime,
+            lastUpdated: Date.now()
+        });
+        progressEvent.emit('progress', requestId);
 
-    const converted = await ConvertV4();
+        const convertedName = mapZip.filename.split(".")[0];
+        const zipPath = path.join(mapZip.destination, mapZip.filename);
 
-    if (converted) {
+        const zip = new AdmZip(zipPath);
+        zip.extractAllTo(mapDir);
+
+        progressTracker.set(requestId, {
+            status: 'converting',
+            message: 'Converting map to v2 format',
+            progress: 40,
+            startTime: progressTracker.get(requestId)!.startTime,
+            lastUpdated: Date.now()
+        });
+        progressEvent.emit('progress', requestId);
+
+        const converted = await ConvertV4(mapDir, convertedDir);
+
+        if (!converted) {
+            progressTracker.set(requestId, {
+                status: 'failed',
+                message: 'Conversion failed',
+                progress: 0,
+                error: 'Failed to convert map files',
+                startTime: progressTracker.get(requestId)!.startTime,
+                lastUpdated: Date.now()
+            });
+            progressEvent.emit('progress', requestId);
+            throw new Error("Conversion failed");
+        }
+
+        progressTracker.set(requestId, {
+            status: 'compressing',
+            message: 'Creating converted zip file',
+            progress: 80,
+            startTime: progressTracker.get(requestId)!.startTime,
+            lastUpdated: Date.now()
+        });
+        progressEvent.emit('progress', requestId);
 
         const newZip = new AdmZip();
-
-        newZip.addLocalFolder(path.join(__dirname, "converted"))
-
+        newZip.addLocalFolder(convertedDir);
         const buffer = newZip.toBuffer();
+
+        progressTracker.set(requestId, {
+            status: 'complete',
+            message: 'Conversion complete',
+            progress: 100,
+            startTime: progressTracker.get(requestId)!.startTime,
+            lastUpdated: Date.now()
+        });
+        progressEvent.emit('progress', requestId);
 
         res.set({
             'Content-Type': 'application/zip',
             'Content-Disposition': `attachment; filename="${convertedName}_converted.zip"`,
-            'Content-Length': buffer.length
+            'Content-Length': buffer.length,
+            'X-Request-ID': requestId
         });
 
         res.send(buffer);
-
+    } catch (error) {
+        console.error("Error processing request:", error);
+        
+        if (progressTracker.get(requestId)?.status !== 'failed') {
+            progressTracker.set(requestId, {
+                status: 'failed',
+                message: 'Conversion error occurred',
+                progress: 0,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                startTime: progressTracker.get(requestId)!.startTime,
+                lastUpdated: Date.now()
+            });
+            progressEvent.emit('progress', requestId);
+        }
+        
+        res.status(500).send("Something went wrong during conversion.");
+    } finally {
         res.on('finish', () => {
-            fs.unlinkSync(zipPath);
-            fs.rmSync(path.join(__dirname, "map"), { recursive: true, force: true });
-            fs.rmSync(path.join(__dirname, "converted"), { recursive: true, force: true });
+            try {
+                if (mapZip && fs.existsSync(path.join(mapZip.destination, mapZip.filename))) {
+                    fs.unlinkSync(path.join(mapZip.destination, mapZip.filename));
+                }
+                if (fs.existsSync(mapDir)) {
+                    fs.rmSync(mapDir, { recursive: true, force: true });
+                }
+                if (fs.existsSync(convertedDir)) {
+                    fs.rmSync(convertedDir, { recursive: true, force: true });
+                }
+            } catch (err) {
+                console.error("Error during cleanup:", err);
+            }
         });
-    } else {
-        fs.unlinkSync(zipPath);
-        fs.rmSync(path.join(__dirname, "map"), { recursive: true, force: true });
-        fs.rmSync(path.join(__dirname, "converted"), { recursive: true, force: true });
-        return res.status(500).send("Something went wrong.")
     }
 });
 
-app.listen(process.env.PORT || 3000, () => console.log("Listening on port", process.env.PORT || "3000"));
+// @ts-ignore
+app.get("/api/progress/:requestId", (req: Request, res: Response) => {
+    const { requestId } = req.params;
+    const progress = progressTracker.get(requestId);
+
+    if (!progress) {
+        return res.status(404).json({ error: "Request not found or expired" });
+    }
+
+    return res.json(progress);
+});
+
+// @ts-ignore
+app.get("/api/progress-stream/:requestId", (req: Request, res: Response) => {
+    const { requestId } = req.params;
+    const progress = progressTracker.get(requestId);
+    
+    if (!progress) {
+        return res.status(404).json({ error: "Request not found or expired" });
+    }
+    
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    res.write(`data: ${JSON.stringify(progress)}\n\n`);
+    
+    const listener = (emittedRequestId: string) => {
+        if (emittedRequestId === requestId) {
+            const currentProgress = progressTracker.get(requestId);
+            if (currentProgress) {
+                res.write(`data: ${JSON.stringify(currentProgress)}\n\n`);
+                
+                if (currentProgress.status === 'complete' || currentProgress.status === 'failed') {
+                    res.end();
+                }
+            }
+        }
+    };
+    
+    progressEvent.on('progress', listener);
+    
+    req.on('close', () => {
+        progressEvent.removeListener('progress', listener);
+    });
+});
+
+app.listen(process.env.PORT || 3005, () => console.log("Listening on port", process.env.PORT || "3005"));
