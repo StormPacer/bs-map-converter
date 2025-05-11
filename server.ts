@@ -66,22 +66,35 @@ function exists(filename: string, returnPath: boolean = false): boolean | any {
     }
 }
 
+function findFileInsensitive(dir: string, target: string): string | null {
+    const files = fs.readdirSync(dir);
+    const normalizedTarget = target.replace(/\s+/g, '').toLowerCase();
+    for (const file of files) {
+        if (file.replace(/\s+/g, '').toLowerCase() === normalizedTarget) {
+            return path.join(dir, file);
+        }
+    }
+    return null;
+}
 
 async function ConvertV4(inputDir: string, outputDir: string): Promise<boolean> {
     try {
-        console.log("ConvertV4 inputDir:", inputDir);
-        console.log("ConvertV4 outputDir:", outputDir);
-        console.log("inputDir contents:", fs.readdirSync(inputDir));
-
-        const infoFile = exists(path.join(inputDir, "Info.dat"));
+        const infoPath = findFileInsensitive(inputDir, "Info.dat");
+        if (!infoPath) {
+            console.error("Info.dat not found in", inputDir);
+            return false;
+        }
+        const infoFile = exists(infoPath);
         if (!infoFile) return false;
         const info = loadInfo(infoFile, 4) as Info;
         changeInfo(info);
 
-        const audioFile = exists(path.join(inputDir, info.audio.audioDataFilename), true)
-        const audioData = readAudioDataFileSync(audioFile).setFilename(
-            'BPMInfo.dat',
-        );
+        const audioPath = findFileInsensitive(inputDir, info.audio.audioDataFilename);
+        if (!audioPath) {
+            console.error("Audio file not found:", info.audio.audioDataFilename);
+            return false;
+        }
+        const audioData = readAudioDataFileSync(audioPath).setFilename('BPMInfo.dat');
         writeAudioDataFile(audioData, 2);
 
         const bpmEvents = audioData.getBpmEvents();
