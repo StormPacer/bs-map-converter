@@ -69,6 +69,10 @@ function exists(filename: string, returnPath: boolean = false): boolean | any {
 
 async function ConvertV4(inputDir: string, outputDir: string): Promise<boolean> {
     try {
+        console.log("ConvertV4 inputDir:", inputDir);
+        console.log("ConvertV4 outputDir:", outputDir);
+        console.log("inputDir contents:", fs.readdirSync(inputDir));
+
         const infoFile = exists(path.join(inputDir, "Info.dat"));
         if (!infoFile) return false;
         const info = loadInfo(infoFile, 4) as Info;
@@ -249,7 +253,7 @@ app.post("/api/upload", uploadMiddleware, async (req: TypedRequest, res: Respons
         res.send(buffer);
     } catch (error) {
         console.error("Error processing request:", error);
-        
+
         if (progressTracker.get(requestId)?.status !== 'failed') {
             progressTracker.set(requestId, {
                 status: 'failed',
@@ -261,7 +265,7 @@ app.post("/api/upload", uploadMiddleware, async (req: TypedRequest, res: Respons
             });
             progressEvent.emit('progress', requestId);
         }
-        
+
         res.status(500).send("Something went wrong during conversion.");
     } finally {
         res.on('finish', () => {
@@ -298,32 +302,32 @@ app.get("/api/progress/:requestId", (req: Request, res: Response) => {
 app.get("/api/progress-stream/:requestId", (req: Request, res: Response) => {
     const { requestId } = req.params;
     const progress = progressTracker.get(requestId);
-    
+
     if (!progress) {
         return res.status(404).json({ error: "Request not found or expired" });
     }
-    
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    
+
     res.write(`data: ${JSON.stringify(progress)}\n\n`);
-    
+
     const listener = (emittedRequestId: string) => {
         if (emittedRequestId === requestId) {
             const currentProgress = progressTracker.get(requestId);
             if (currentProgress) {
                 res.write(`data: ${JSON.stringify(currentProgress)}\n\n`);
-                
+
                 if (currentProgress.status === 'complete' || currentProgress.status === 'failed') {
                     res.end();
                 }
             }
         }
     };
-    
+
     progressEvent.on('progress', listener);
-    
+
     req.on('close', () => {
         progressEvent.removeListener('progress', listener);
     });
