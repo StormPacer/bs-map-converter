@@ -116,9 +116,7 @@ async function ConvertV4(inputDir: string, outputDir: string): Promise<boolean> 
             const newDiff = writeDifficultyFileSync(v4Diff, 3);
 
             const copy: any = JSON.parse(JSON.stringify(newDiff));
-            const outputFilename = diff.characteristic === "Standard" ?
-                `${diff.difficulty}.beatmap.dat` :
-                `${diff.characteristic}${diff.difficulty}.beatmap.dat`;
+            const outputFilename = diff.filename;
 
             fs.writeFileSync(`${outputDir}/${outputFilename}`, JSON.stringify(removeEmpty(copy)));
         }
